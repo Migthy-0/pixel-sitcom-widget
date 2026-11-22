@@ -10,11 +10,19 @@ import android.widget.RemoteViews
 
 class SitcomWidgetProvider : AppWidgetProvider() {
 
+    override fun onEnabled(context: Context) {
+        super.onEnabled(context)
+        SoundPlayer.init(context)
+        SitcomKeepAliveService.ensureRunning(context)
+    }
+
     override fun onUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
+        SoundPlayer.init(context)
+        SitcomKeepAliveService.ensureRunning(context)
         for (appWidgetId in appWidgetIds) {
             updateAppWidget(context, appWidgetManager, appWidgetId)
         }
@@ -22,8 +30,15 @@ class SitcomWidgetProvider : AppWidgetProvider() {
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
-        if (intent.action == ACTION_PLAY_LAUGH) {
-            SoundPlayer.play(context, R.raw.sitcom_laugh)
+        when (intent.action) {
+            ACTION_PLAY_LAUGH -> {
+                SoundPlayer.play(context)
+                SitcomKeepAliveService.ensureRunning(context)
+            }
+            Intent.ACTION_BOOT_COMPLETED -> {
+                SoundPlayer.init(context)
+                SitcomKeepAliveService.ensureRunning(context)
+            }
         }
     }
 
@@ -48,6 +63,7 @@ class SitcomWidgetProvider : AppWidgetProvider() {
             val intent = Intent(context, SitcomWidgetProvider::class.java).apply {
                 action = ACTION_PLAY_LAUGH
                 component = ComponentName(context, SitcomWidgetProvider::class.java)
+                addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
             }
             return PendingIntent.getBroadcast(
                 context,

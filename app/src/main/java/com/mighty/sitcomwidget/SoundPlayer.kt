@@ -2,47 +2,60 @@ package com.mighty.sitcomwidget
 
 import android.content.Context
 import android.media.AudioAttributes
-import android.media.MediaPlayer
-import androidx.annotation.RawRes
+import android.media.SoundPool
 
 object SoundPlayer {
-    private var activePlayer: MediaPlayer? = null
+    private var soundPool: SoundPool? = null
+    private var laughSoundId: Int = 0
+    private var activeStreamId: Int = 0
+    @Volatile
+    private var isLoaded: Boolean = false
+    @Volatile
+    private var playWhenLoaded: Boolean = false
 
-    fun play(context: Context, @RawRes soundResId: Int) {
-        stop()
-        val appContext = context.applicationContext
-        val player = MediaPlayer.create(
-            appContext,
-            soundResId,
-            AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_MEDIA)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .build(),
-            0
-        ) ?: return
+    @Synchronized
+    fun init(context: Context) {
+        if (soundPool != null) return
 
-        activePlayer = player
-        player.setOnCompletionListener { mp ->
-            mp.release()
-            if (activePlayer === mp) {
-                activePlayer = null
+        val attributes = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_MEDIA)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
+
+        val pool = SoundPool.Builder()
+            .setMaxStreams(2)
+            .setAudioAttributes(attributes)
+            .build()
+
+        pool.setOnLoadCompleteListener { sp, sampleId, status ->
+            if (status == 0 && sampleId == laughSoundId) {
+                isLoaded = true
+                if (playWhenLoaded) {
+                    playWhenLoaded = false
+                    activeStreamId = sp.play(laughSoundId, 1.0f, 1.0f, 1, 0, 1.0f)
+                }
             }
         }
-        player.start()
+
+        laughSoundId = pool.load(context.applicationContext, R.raw.sitcom_laugh, 1)
+        soundPool = pool
     }
 
-    fun stop() {
-        try {
-            activePlayer?.let { player ->
-                if (player.isPlaying) {
-                    player.stop()
-                }
-                player.release()
+    fun play(context: Context) {
+        if (soundPool == null) {
+            playWhenLoaded = true
+            init(context)
+            return
+        }
+
+        val pool = soundPool ?: return
+        if (isLoaded) {
+            if (activeStreamId != 0) {
+                pool.stop(activeStreamId)
             }
-        } catch (_: Exception) {
-            // Ignore state exceptions on rapid taps
-        } finally {
-            activePlayer = null
+            activeStreamId = pool.play(laughSoundId, 1.0f, 1.0f, 1, 0, 1.0f)
+        } else {
+            playWhenLoaded = true
         }
     }
 }
