@@ -1,0 +1,17 @@
+{
+  "name": "Risas Enlatadas • Pixel 9",
+  "short_name": "😂 Risas",
+  "description": "Botonera Material You de risas enlatadas para tu Pixel 9",
+  "start_url": "./?source=pwa",
+  "display": "standalone",
+  "background_color": "#141218",
+  "theme_color": "#141218",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
